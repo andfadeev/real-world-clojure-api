@@ -4,16 +4,20 @@
             [real-world-clojure-api.components.example-component
              :as example-component]
             [real-world-clojure-api.components.pedestal-component
-             :as pedestal-component]))
+             :as pedestal-component]
+            [real-world-clojure-api.components.in-memory-state-component
+             :as in-memory-state-component]))
 
 (defn real-world-clojure-api-system
   [config]
   (component/system-map
     :example-component (example-component/new-example-component config)
+    :in-memory-state-component (in-memory-state-component/new-in-memory-state-component config)
     :pedestal-component
     (component/using
       (pedestal-component/new-pedestal-component config)
-      [:example-component])))
+      [:example-component
+       :in-memory-state-component])))
 
 (defn -main
   []
