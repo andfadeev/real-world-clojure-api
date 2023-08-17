@@ -5,11 +5,12 @@
         org.slf4j/slf4j-simple {:mvn/version "2.0.7"}
         com.stuartsierra/component {:mvn/version "1.1.0"}
         com.stuartsierra/component.repl {:mvn/version "0.2.0"}
-        clj-http/clj-http {:mvn/version "3.12.3"}}
+        clj-http/clj-http {:mvn/version "3.12.3"}
+        prismatic/schema {:mvn/version "1.4.1"}}
  :aliases {:dev {:main-opts ["-e" "(require,'dev)"
                              "-e" "(in-ns,'dev)"]}
            :test {:extra-paths ["test"]
                   :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
                   :main-opts ["-m" "cognitect.test-runner"]
                   :exec-fn cognitect.test-runner.api/test}}
- :paths ["src" "resources" "dev"]}
+ :paths ["src" "resources" "dev" "test"]}
