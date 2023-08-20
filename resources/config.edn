@@ -1,1 +1,2 @@
-{:server {:port #long #or [#env REAL_WORLD_CLOJURE_API_SERVER_PORT 8080]}}
+{:server {:port #long #or [#env REAL_WORLD_CLOJURE_API_SERVER_PORT 8080]}
+ :htmx {:server {:port #long #or [#env RWCA_HTMX_SERVER_PORT 8081]}}}

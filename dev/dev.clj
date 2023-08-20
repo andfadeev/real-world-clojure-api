@@ -3,5 +3,7 @@
             [real-world-clojure-api.core :as core]))
 
 (component-repl/set-init
-  (fn [_old-system]
-    (core/real-world-clojure-api-system {:server {:port 3001}})))
+  (fn [_]
+    (core/real-world-clojure-api-system
+      {:server {:port 3001}
+       :htmx {:server {:port 3002}}})))
