@@ -4,12 +4,15 @@
             [io.pedestal.http.route :as route]
             [io.pedestal.interceptor :as interceptor]
             [real-world-clojure-api.routes.htmx.click-to-edit
-             :as click-to-edit]))
+             :as click-to-edit]
+            [real-world-clojure-api.routes.htmx.infinite-scroll
+             :as infinite-scroll]))
 
 (def routes
   (route/expand-routes
     (into #{}
-          (concat click-to-edit/routes))))
+          (concat click-to-edit/routes
+                  infinite-scroll/routes))))
 
 (defn inject-dependencies
   [dependencies]

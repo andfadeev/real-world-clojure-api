@@ -8,7 +8,8 @@
         clj-http/clj-http {:mvn/version "3.12.3"}
         prismatic/schema {:mvn/version "1.4.1"}
 
-        hiccup/hiccup {:mvn/version "2.0.0-RC1"}}
+        hiccup/hiccup {:mvn/version "2.0.0-RC1"}
+        faker/faker {:mvn/version "0.3.2"}}
  :aliases {:dev {:main-opts ["-e" "(require,'dev)"
                              "-e" "(in-ns,'dev)"]}
            :test {:extra-paths ["test"]
