@@ -2,15 +2,24 @@
   (:require [com.stuartsierra.component :as component]
             [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
-            [io.pedestal.interceptor :as interceptor]))
+            [io.pedestal.interceptor :as interceptor]
+            [io.pedestal.http.content-negotiation :as content-negotiation]
+            [io.pedestal.http.body-params :as body-params]
+            [cheshire.core :as json]
+            [schema.core :as s]))
 
 (defn response
-  [status body]
-  {:status status
-   :body body
-   :headers nil})
+  ([status]
+   (response status nil))
+  ([status body]
+   (merge
+     {:status status
+      :headers {"Content-Type" "application/json"}}
+     (when body {:body (json/encode body)}))))
 
 (def ok (partial response 200))
+(def created (partial response 201))
+(def not-found (partial response 404))
 
 (defn get-todo-by-id
   [{:keys [in-memory-state-component]} todo-id]
@@ -24,12 +33,13 @@
    :enter
    (fn [{:keys [dependencies] :as context}]
      (let [request (:request context)
-           response (ok
-                      (get-todo-by-id dependencies
-                                      (-> request
-                                          :path-params
-                                          :todo-id
-                                          (parse-uuid))))]
+           todo (get-todo-by-id dependencies
+                                (-> request
+                                    :path-params
+                                    :todo-id))
+           response (if todo
+                      (ok todo)
+                      (not-found))]
        (assoc context :response response)))})
 
 (comment
@@ -47,10 +57,39 @@
   {:status 200
    :body "Hello world"})
 
+(defn save-todo!
+  [{:keys [in-memory-state-component]} todo]
+  (swap! (:state-atom in-memory-state-component) conj todo))
+
+
+
+(s/defschema
+  TodoItem
+  {:id s/Str
+   :name s/Str
+   :status s/Str})
+
+(s/defschema
+  Todo
+  {:id s/Str
+   :name s/Str
+   :items [TodoItem]})
+
+(def post-todo-handler
+  {:name :post-todo-handler
+   :enter
+   (fn [{:keys [dependencies] :as context}]
+     (let [request (:request context)
+           todo (s/validate Todo (:json-params request))]
+       (save-todo! dependencies todo)
+       (assoc context :response (created todo))))})
+
 (def routes
   (route/expand-routes
     #{["/greet" :get respond-hello :route-name :greet]
-      ["/todo/:todo-id" :get get-todo-handler :route-name :get-todo]}))
+      ["/todo/:todo-id" :get get-todo-handler :route-name :get-todo]
+      ["/todo" :post [(body-params/body-params) post-todo-handler] :route-name :post-todo]
+      }))
 
 (def url-for (route/url-for-routes routes))
 
@@ -60,6 +99,9 @@
     {:name ::inject-dependencies
      :enter (fn [context]
               (assoc context :dependencies dependencies))}))
+
+(def content-negotiation-interceptor
+  (content-negotiation/negotiate-content ["application/json"]))
 
 (defrecord PedestalComponent
   [config
@@ -75,7 +117,8 @@
                       ::http/port (-> config :server :port)}
                      (http/default-interceptors)
                      (update ::http/interceptors concat
-                             [(inject-dependencies component)])
+                             [(inject-dependencies component)
+                              content-negotiation-interceptor])
                      (http/create-server)
                      (http/start))]
       (assoc component :server server)))
