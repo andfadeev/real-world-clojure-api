@@ -6,6 +6,7 @@
             [io.pedestal.http.content-negotiation :as content-negotiation]
             [io.pedestal.http.body-params :as body-params]
             [cheshire.core :as json]
+            [next.jdbc :as jdbc]
             [schema.core :as s]))
 
 (defn response
@@ -57,11 +58,20 @@
   {:status 200
    :body "Hello world"})
 
+
+(def response-from-database
+  {:name :response-from-database
+   :enter
+   (fn [{:keys [dependencies] :as context}]
+     (let [{:keys [ds]} dependencies
+           db-response (first (jdbc/execute! (ds) ["SHOW SERVER_VERSION"]))]
+       (clojure.pprint/pprint db-response)
+       (assoc context :response {:status 200
+                                 :body (str "From database: " (:server_version db-response))})))})
+
 (defn save-todo!
   [{:keys [in-memory-state-component]} todo]
   (swap! (:state-atom in-memory-state-component) conj todo))
-
-
 
 (s/defschema
   TodoItem
@@ -87,6 +97,7 @@
 (def routes
   (route/expand-routes
     #{["/greet" :get respond-hello :route-name :greet]
+      ["/response-from-database" :get response-from-database :route-name :response-from-database]
       ["/todo/:todo-id" :get get-todo-handler :route-name :get-todo]
       ["/todo" :post [(body-params/body-params) post-todo-handler] :route-name :post-todo]
       }))
@@ -106,7 +117,8 @@
 (defrecord PedestalComponent
   [config
    example-component
-   in-memory-state-component]
+   in-memory-state-component
+   ds]
   component/Lifecycle
 
   (start [component]
