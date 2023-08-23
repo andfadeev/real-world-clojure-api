@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  database:
+    image: postgres:15.4
+    ports:
+      - '5432:5432'
+    environment:
+      - 'POSTGRES_USER=rwca'
+      - 'POSTGRES_PASSWORD=rwca'
+      - 'POSTGRES_DB=rwca'
+      - "POSTGRES_INITDB_ARGS='--encoding=UTF-8'"

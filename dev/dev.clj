@@ -6,4 +6,7 @@
   (fn [_]
     (core/real-world-clojure-api-system
       {:server {:port 3001}
-       :htmx {:server {:port 3002}}})))
+       :htmx {:server {:port 3002}}
+       :db-spec {:jdbcUrl "jdbc:postgresql://localhost:5432/rwca"
+                 :username "rwca"
+                 :password "rwca"}})))

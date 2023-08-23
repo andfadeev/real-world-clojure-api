@@ -6,6 +6,7 @@
             [io.pedestal.http.content-negotiation :as content-negotiation]
             [io.pedestal.http.body-params :as body-params]
             [cheshire.core :as json]
+            [next.jdbc :as jdbc]
             [schema.core :as s]))
 
 (defn response
@@ -41,6 +42,19 @@
                       (ok todo)
                       (not-found))]
        (assoc context :response response)))})
+
+
+(def info-handler
+  {:name :info-handler
+   :enter
+   (fn [{:keys [dependencies] :as context}]
+     (let [{:keys [data-source]} dependencies
+           db-response (first (jdbc/execute!
+                                (data-source)
+                                ["SHOW SERVER_VERSION"]))]
+       (assoc context :response
+              {:status 200
+               :body (str "Database server version: " (:server_version db-response))})))})
 
 (comment
   [{:id (random-uuid)
@@ -87,6 +101,7 @@
 (def routes
   (route/expand-routes
     #{["/greet" :get respond-hello :route-name :greet]
+      ["/info" :get info-handler :route-name :info]
       ["/todo/:todo-id" :get get-todo-handler :route-name :get-todo]
       ["/todo" :post [(body-params/body-params) post-todo-handler] :route-name :post-todo]
       }))
@@ -106,6 +121,7 @@
 (defrecord PedestalComponent
   [config
    example-component
+   data-source
    in-memory-state-component]
   component/Lifecycle
 
