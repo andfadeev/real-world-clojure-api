@@ -6,13 +6,16 @@
             [real-world-clojure-api.routes.htmx.click-to-edit
              :as click-to-edit]
             [real-world-clojure-api.routes.htmx.infinite-scroll
-             :as infinite-scroll]))
+             :as infinite-scroll]
+            [real-world-clojure-api.routes.htmx.active-search
+             :as active-search]))
 
 (def routes
   (route/expand-routes
     (into #{}
           (concat click-to-edit/routes
-                  infinite-scroll/routes))))
+                  infinite-scroll/routes
+                  active-search/routes))))
 
 (defn inject-dependencies
   [dependencies]
