@@ -25,7 +25,15 @@
 
 (def title "HTMX: Active Search")
 
-;https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt
+(defn load-text-data*
+  []
+  (let [lines (-> (slurp "https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt")
+                  (str/split #"\n"))]
+    (->> lines
+         (remove str/blank?)
+         (map str/trim))))
+
+(def load-text-data (memoize load-text-data*))
 
 (defn- layout
   [body]
@@ -40,12 +48,26 @@
       title]
      body]]])
 
+
 (def root-handler
   {:name ::root
    :enter
    (fn [context]
      (assoc context :response
-            (-> [:div "root"]
+            (-> (list
+                  [:div.htmx-indicator
+                   "Searching..."]
+                  [:input
+                   {:class (tw [tw-input])
+                    :type "search"
+                    :name "q"
+                    :placeholder "Begin Typing To Search..."
+                    :hx-get "/htmx/active-search/search"
+                    :hx-trigger "keyup changed delay:500ms"
+                    :hx-target "#search-results"
+                    :hx-indicator ".htmx-indicator"}]
+                  [:div#search-results
+                   "Search results"])
                 (layout)
                 (ok))))})
 
@@ -54,8 +76,16 @@
   {:name ::search
    :enter
    (fn [context]
-     (let [q (-> context :request :query-params :q)
-           response (-> [:div q]
+     (let [q (-> context :request :query-params :q str/trim)
+           lines (if (str/blank? q)
+                   []
+                   (->> (load-text-data)
+                        (filter (fn [line]
+                                  (str/includes? line q)))
+                        (take 50)))
+           response (-> (map (fn [line]
+                               [:div.even:bg-red-50.odd:bg-green-50.p-2 line]) lines)
+                        (doall)
                         (ok))]
        (assoc context :response response)))})
 
