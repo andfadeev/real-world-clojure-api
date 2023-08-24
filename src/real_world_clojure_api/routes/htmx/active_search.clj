@@ -1,6 +1,19 @@
 (ns real-world-clojure-api.routes.htmx.active-search
-  (:require [hiccup.page :as hp]
+  (:require [clojure.string :as str]
+            [hiccup.page :as hp]
             [hiccup2.core :as h]))
+
+(defn tw
+  [classes]
+  (->> (flatten classes)
+       (remove nil?)
+       (map name)
+       (sort)
+       (str/join " ")))
+
+(def tw-input
+  [:bg-gray-200 :appearance-none :border-2 :border-gray-200 :rounded :py-2 :px-4 :text-gray-700 :leading-tight :focus:outline-none :focus:bg-white :focus:border-blue-500])
+
 
 (defn ok
   [body]
@@ -42,8 +55,7 @@
    :enter
    (fn [context]
      (let [q (-> context :request :query-params :q)
-           response (-> [:div.bg-green-100.p-10
-                         [:span q]]
+           response (-> [:div q]
                         (ok))]
        (assoc context :response response)))})
 
