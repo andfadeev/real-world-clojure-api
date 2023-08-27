@@ -48,9 +48,9 @@
   {:name :info-handler
    :enter
    (fn [{:keys [dependencies] :as context}]
-     (let [{:keys [data-source]} dependencies
+     (let [{:keys [datasource]} dependencies
            db-response (first (jdbc/execute!
-                                (data-source)
+                                (datasource)
                                 ["SHOW SERVER_VERSION"]))]
        (assoc context :response
               {:status 200
@@ -121,7 +121,7 @@
 (defrecord PedestalComponent
   [config
    example-component
-   data-source
+   datasource
    in-memory-state-component]
   component/Lifecycle
 
