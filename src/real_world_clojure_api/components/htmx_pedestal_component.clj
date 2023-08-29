@@ -8,14 +8,17 @@
             [real-world-clojure-api.routes.htmx.infinite-scroll
              :as infinite-scroll]
             [real-world-clojure-api.routes.htmx.active-search
-             :as active-search]))
+             :as active-search]
+            [real-world-clojure-api.routes.htmx.delete-with-confirmation
+             :as delete-with-confirmation]))
 
 (def routes
   (route/expand-routes
     (into #{}
           (concat click-to-edit/routes
                   infinite-scroll/routes
-                  active-search/routes))))
+                  active-search/routes
+                  delete-with-confirmation/routes))))
 
 (defn inject-dependencies
   [dependencies]
