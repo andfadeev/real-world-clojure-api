@@ -51,7 +51,8 @@
      "https://cdn.tailwindcss.com?plugins=forms"
      "https://unpkg.com/htmx.org@1.9.4"
      "https://unpkg.com/hyperscript.org@0.9.11"
-     "https://cdn.jsdelivr.net/npm/sweetalert2@11")
+     "https://cdn.jsdelivr.net/npm/sweetalert2@11"
+     "https://unpkg.com/htmx.org/dist/ext/disable-element.js")
    [:body
     [:div {:class "container mx-auto mt-10"}
      [:h1 {:class "text-2xl font-bold leading-7 text-gray-900 mb-5 sm:p-0 p-6"}
@@ -114,8 +115,11 @@
            email]}]
   [:form
    {:class (tw [:bg-slate-100
-                :p-5])
-    :hx-post (format "/htmx/form-validation/user/%s/edit" id)
+                :p-5 :disabled:bg-green-500])
+    :hx-boost "true"
+    :hx-ext "disable-element"
+    :hx-disable-element "self"
+    :hx-post "/htmx/form-validation/create"
     :hx-target "this"
     :hx-swap "outerHTML"}
    [:div
@@ -151,17 +155,19 @@
        (assoc context :response response)))})
 
 
-(def delete-handler
-  {:name ::delete
+(def post-form-handler
+  {:name ::post-form
    :enter
    (fn [context]
-     (let [item-id (-> context :request :path-params :item-id)]
+     #_(let [item-id (-> context :request :path-params :item-id)]
        (swap! items-atom
               (fn [items]
                 (remove (fn [item]
                           (= (str (:id item)) item-id)) items))))
+     (Thread/sleep 10000)
+     (assoc context :response (ok nil))
 
-     (assoc context :response (ok nil)))})
+     )})
 
 (def routes
   #{["/htmx/form-validation"
@@ -170,6 +176,9 @@
     ["/htmx/form-validation/create"
      :get get-form-handler
      :route-name ::get-form]
-    ["/htmx/delete-with-confirmation/items/:item-id"
+    ["/htmx/form-validation/create"
+     :post post-form-handler
+     :route-name ::post-form]
+    #_["/htmx/delete-with-confirmation/items/:item-id"
      :delete delete-handler
      :route-name ::delete]})
