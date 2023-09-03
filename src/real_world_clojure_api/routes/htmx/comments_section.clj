@@ -61,28 +61,33 @@
 (def author-name "Andrey Fadeev")
 
 (defn comment-component
-  [comment]
-  [:div.odd:bg-white.even:bg-slate-100.px-4.py-4.sm:px-6.lg:px-8
-   [:p.text-gray-700.text-sm.linkify.break-all
-    (:comment comment)]
-   [:div.mt-2.flex.items-center.gap-1.text-xs.text-gray-500
-    [:a.flex.items-center.hover:underline.gap-1
-     {:href "#"}
-     [:img.rounded-full.h-5.w-5
-      {:src (:picture comment)}]
-     [:span (:name comment)]]]])
+  ([comment]
+   (comment-component comment {}))
+  ([comment opts]
+   [:div.odd:bg-white.even:bg-slate-100.px-4.py-4.sm:px-6.lg:px-8
+    opts
+    [:p.text-gray-700.text-sm.linkify.break-all
+     (:comment comment)]
+    [:div.mt-2.flex.items-center.gap-1.text-xs.text-gray-500
+     [:a.flex.items-center.hover:underline.gap-1
+      {:href "#"}
+      [:img.rounded-full.h-5.w-5
+       {:src (:picture comment)}]
+      [:span (:name comment)]]]]))
 
 (defn comment-form-component
   []
   [:form.px-4.py-4.sm:px-6.lg:px-8
    {:hx-post "/htmx/comments-section/comments"
-    :hx-target "#comments"
+    :hx-target "this"
     :hx-swap "outerHTML"
-    :hx-boost "true"}
+    :hx-boost "true"
+    }
    [:div
     [:label.sr-only {:for "comment"} "Comment"]
     [:textarea#comment.w-full.p-3.text-sm.rounded-sm
-     {:name "comment"
+     {:autocomplete "off"
+      :name "comment"
       :class (tw [tw-input])
       :placeholder "Your comment" :rows "5"}]]
    [:div.mt-2
@@ -90,14 +95,20 @@
      {:type "submit"}
      [:span.font-medium "Publish comment"]]]])
 
+(defn comments-component
+  [])
+
 (defn comments-section-component
   [comments]
-  [:div#comments.shadow-xl.mt-4
+  [:div.shadow-xl.mt-4
    [:h2.px-4.sm:px-6.lg:px-8.bg-gray-100.py-5.text-lg.font-medium.sm:text-xl (format "Comments (%s)" (count comments))]
-   [:div.mx-auto
+   [:div#comments.mx-auto
+    {:hx-get "/contacts/table"
+     :hx-trigger "newComment from:body, every 10s"}
     (for [comment comments]
       (comment-component comment))
-    (comment-form-component)]])
+    ]
+   (comment-form-component)])
 
 (def root-handler
   {:name ::root
@@ -108,18 +119,44 @@
                (layout)
                (ok))]
        (assoc context :response response)))})
+
 (def post-handler
   {:name ::post
    :enter
    (fn [context]
-     (clojure.pprint/pprint (:request context))
      (let [comment {:comment (-> context :request :params :comment)
                     :name author-name
                     :picture author-picture}
            _ (swap! comments-atom conj comment)
            response
-           (-> (comments-section-component @comments-atom)
-               (ok))]
+           (-> #_(list
+                 [:div {:hx-swap-oob "afterbegin:#comments"}
+                  (comment-component
+                    comment
+                    )]
+                 (comment-form-component))
+             (comment-form-component)
+             (ok))]
+       (assoc context :response
+              (update response :headers merge {"HX-Trigger" "newComment"}))))})
+
+(def comments-handler
+  {:name ::comments
+   :enter
+   (fn [context]
+     (let [comment {:comment (-> context :request :params :comment)
+                    :name author-name
+                    :picture author-picture}
+           _ (swap! comments-atom conj comment)
+           response
+           (-> #_(list
+                   [:div {:hx-swap-oob "afterbegin:#comments"}
+                    (comment-component
+                      comment
+                      )]
+                   (comment-form-component))
+             (comment-form-component)
+             (ok))]
        (assoc context :response response)))})
 
 (def routes
@@ -127,13 +164,10 @@
      :get root-handler
      :route-name ::root]
     ["/htmx/comments-section/comments"
+     :get comments-handler
+     :route-name ::comments]
+    ["/htmx/comments-section/comments"
      :post [(body-params/body-params)
             params/keyword-params
             post-handler]
      :route-name ::post]})
-
-(comment
-  (defn ->tw
-    [s]
-    (map keyword (str/split s #" "))))
-
