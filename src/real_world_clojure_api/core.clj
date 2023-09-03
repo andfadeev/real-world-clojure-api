@@ -1,5 +1,6 @@
 (ns real-world-clojure-api.core
-  (:require [com.stuartsierra.component :as component]
+  (:require [clojure.tools.logging :as log]
+            [com.stuartsierra.component :as component]
             [next.jdbc.connection :as connection]
             [real-world-clojure-api.config :as config]
             [real-world-clojure-api.components.example-component
@@ -10,7 +11,23 @@
              :as in-memory-state-component]
             [real-world-clojure-api.components.htmx-pedestal-component
              :as htmx-pedestal-component])
-  (:import (com.zaxxer.hikari HikariDataSource)))
+  (:import (com.zaxxer.hikari HikariDataSource)
+           (org.flywaydb.core Flyway)))
+
+(defn datasource-component
+  [config]
+  (connection/component
+    HikariDataSource
+    (assoc (:db-spec config)
+           :init-fn (fn [datasource]
+                      (log/info "Running database init")
+                      (.migrate
+                        (.. (Flyway/configure)
+                            (dataSource datasource)
+                            ; https://www.red-gate.com/blog/database-devops/flyway-naming-patterns-matter
+                            (locations (into-array String ["classpath:database/migrations"]))
+                            (table "schema_version")
+                            (load)))))))
 
 (defn real-world-clojure-api-system
   [config]
@@ -18,13 +35,13 @@
     :example-component (example-component/new-example-component config)
     :in-memory-state-component (in-memory-state-component/new-in-memory-state-component config)
 
-    :data-source (connection/component HikariDataSource (:db-spec config))
+    :datasource (datasource-component config)
 
     :pedestal-component
     (component/using
       (pedestal-component/new-pedestal-component config)
       [:example-component
-       :data-source
+       :datasource
        :in-memory-state-component])
 
     :htmx-pedestal-component
