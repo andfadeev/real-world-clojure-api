@@ -10,7 +10,9 @@
             [real-world-clojure-api.routes.htmx.active-search
              :as active-search]
             [real-world-clojure-api.routes.htmx.delete-with-confirmation
-             :as delete-with-confirmation]))
+             :as delete-with-confirmation]
+            [real-world-clojure-api.routes.htmx.form-validation
+             :as form-validation]))
 
 (def routes
   (route/expand-routes
@@ -18,7 +20,8 @@
           (concat click-to-edit/routes
                   infinite-scroll/routes
                   active-search/routes
-                  delete-with-confirmation/routes))))
+                  delete-with-confirmation/routes
+                  form-validation/routes))))
 
 (defn inject-dependencies
   [dependencies]
