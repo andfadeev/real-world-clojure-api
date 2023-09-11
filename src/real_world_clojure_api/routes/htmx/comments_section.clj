@@ -8,7 +8,6 @@
             [io.pedestal.http.params :as params]
             [real-world-clojure-api.routes.htmx.shared :as shared]))
 
-;; Helpers
 (defn ok
   [body]
   {:status 200
@@ -24,13 +23,6 @@
        (map name)
        (sort)
        (str/join " ")))
-
-;; Tailwind classes
-(def tw-primary-button
-  [:bg-blue-500 :hover:bg-blue-400 :text-white :font-bold :py-2 :px-4 :border-b-4 :border-blue-700 :hover:border-blue-500 :rounded])
-
-(def tw-cancel-button
-  [:bg-red-500 :hover:bg-red-400 :text-white :font-bold :py-2 :px-4 :border-b-4 :border-red-700 :hover:border-red-500 :rounded])
 
 (def tw-input
   [:bg-gray-200 :appearance-none :border-2 :border-gray-200 :rounded :py-2 :px-4 :text-gray-700 :leading-tight :focus:outline-none :focus:bg-white :focus:border-blue-500])
@@ -55,6 +47,7 @@
   {:name (first (fn/names))
    :comment (first (fl/paragraphs))
    :picture (shared/random-picture)})
+
 (def comments-atom (atom (repeatedly 3 random-comment)))
 
 (def author-picture (shared/random-picture))
@@ -96,18 +89,20 @@
      [:span.font-medium "Publish comment"]]]])
 
 (defn comments-component
-  [])
+  [comments]
+  [:div#comments
+   {:hx-get "/htmx/comments-section/comments"
+    :hx-trigger "newComment from:body"}
+   [:h2.px-4.sm:px-6.lg:px-8.bg-gray-100.py-5.text-lg.font-medium.sm:text-xl
+    (format "Comments (%s)" (count comments))]
+   [:div.mx-auto
+    (for [comment comments]
+      (comment-component comment))]])
 
 (defn comments-section-component
   [comments]
-  [:div.shadow-xl.mt-4
-   [:h2.px-4.sm:px-6.lg:px-8.bg-gray-100.py-5.text-lg.font-medium.sm:text-xl (format "Comments (%s)" (count comments))]
-   [:div#comments.mx-auto
-    {:hx-get "/contacts/table"
-     :hx-trigger "newComment from:body, every 10s"}
-    (for [comment comments]
-      (comment-component comment))
-    ]
+  [:div#comments-section.shadow-xl.mt-4
+   (comments-component comments)
    (comment-form-component)])
 
 (def root-handler
@@ -129,14 +124,8 @@
                     :picture author-picture}
            _ (swap! comments-atom conj comment)
            response
-           (-> #_(list
-                 [:div {:hx-swap-oob "afterbegin:#comments"}
-                  (comment-component
-                    comment
-                    )]
-                 (comment-form-component))
-             (comment-form-component)
-             (ok))]
+           (-> (comment-form-component)
+               (ok))]
        (assoc context :response
               (update response :headers merge {"HX-Trigger" "newComment"}))))})
 
@@ -144,19 +133,9 @@
   {:name ::comments
    :enter
    (fn [context]
-     (let [comment {:comment (-> context :request :params :comment)
-                    :name author-name
-                    :picture author-picture}
-           _ (swap! comments-atom conj comment)
-           response
-           (-> #_(list
-                   [:div {:hx-swap-oob "afterbegin:#comments"}
-                    (comment-component
-                      comment
-                      )]
-                   (comment-form-component))
-             (comment-form-component)
-             (ok))]
+     (let [response
+           (-> (comments-component @comments-atom)
+               (ok))]
        (assoc context :response response)))})
 
 (def routes
@@ -171,3 +150,23 @@
             params/keyword-params
             post-handler]
      :route-name ::post]})
+
+
+(comment
+  {:hx-post "/htmx/comments-section/comments"
+   :hx-target "#comments-section"
+   :hx-swap "outerHTML"
+   :hx-boost "true"
+   }
+
+
+  {:hx-swap-oob "afterbegin:#comments"}
+
+  (update {} :headers merge {"HX-Trigger" "newComment"})
+
+  ["/htmx/comments-section/comments"
+   :get comments-handler
+   :route-name ::comments]
+
+  {:hx-get "/contacts/table"
+   :hx-trigger "newComment from:body, every 10s"})
