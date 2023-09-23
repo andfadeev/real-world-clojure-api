@@ -10,12 +10,19 @@
             [real-world-clojure-api.components.in-memory-state-component
              :as in-memory-state-component]
             [real-world-clojure-api.components.htmx-pedestal-component
-             :as htmx-pedestal-component])
+             :as htmx-pedestal-component]
+            [hugsql.core :as hugsql]
+            [hugsql.adapter.next-jdbc :as next-adapter]
+            [next.jdbc.result-set :as rs])
   (:import (com.zaxxer.hikari HikariDataSource)
            (org.flywaydb.core Flyway)))
 
+
 (defn datasource-component
   [config]
+  (hugsql/set-adapter!
+    (next-adapter/hugsql-adapter-next-jdbc
+      {:builder-fn rs/as-unqualified-kebab-maps}))
   (connection/component
     HikariDataSource
     (assoc (:db-spec config)
