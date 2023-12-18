@@ -95,6 +95,26 @@
                 (update event :payload <-jsonb)))
          (project))))
 
+(defn get-all-by-customer-id
+  "Just an example when you need to search by some field that exits only inside the payload, in this case by the customer id"
+  [{:keys [datasource]} customer-id]
+  (let [select-query ["SELECT DISTINCT e1.* FROM events e1
+  INNER JOIN events e2 using (aggregate_id)
+  WHERE e2.payload ->> 'customer-id' = ?" customer-id]
+        events (jdbc/execute!
+                 (datasource)
+                 select-query
+                 {:builder-fn rs/as-unqualified-kebab-maps})]
+
+    (->> events
+         (map (fn [event]
+                (update event :payload <-jsonb)))
+         (group-by :aggregate-id)
+         (vals)
+         (sort-by :created-at)
+         (reverse)
+         (map project))))
+
 (deftest event-sourcing-test
   (let [database-container (create-database-container)]
     (try
@@ -104,11 +124,13 @@
                {:db-spec {:jdbcUrl (.getJdbcUrl database-container)
                           :username (.getUsername database-container)
                           :password (.getPassword database-container)}})]
-        (let [order-id (random-uuid)
+        (let [customer-id (str "customer:" (random-uuid))
+              order-id (random-uuid)
               order-created-event {:aggregate-id order-id
                                    :aggregate-type "order"
                                    :type "order-created"
                                    :payload {:items ["x" "y" "z"]
+                                             :customer-id customer-id
                                              :price "100.45"
                                              :status "pending"}}
               order-paid-event {:aggregate-id order-id
@@ -116,16 +138,18 @@
                                 :type "order-paid"
                                 :payload {:status "paid"
                                           :payment-method "CARD"}}
+              tracking-number (str "TX-" (random-uuid))
               order-dispatched-event {:aggregate-id order-id
                                       :aggregate-type "order"
-                                      :type "order-paid"
+                                      :type "order-dispatched"
                                       :payload {:status "dispatched"
-                                                :tracking-number (str "TX-" (random-uuid))}}
+                                                :tracking-number tracking-number}}
               other-order-id (random-uuid)
               other-order-created-event {:aggregate-id other-order-id
                                          :aggregate-type "order"
                                          :type "order-created"
                                          :payload {:items ["something"]
+                                                   :customer-id customer-id
                                                    :price "99.99"
                                                    :status "pending"}}]
           (insert-event! sut order-created-event)
@@ -142,18 +166,23 @@
                       :order-id order-id
                       :payment-method "CARD"
                       :price "100.45"
+                      :customer-id customer-id
                       :resource-type "order"
                       :status "dispatched"}
                      (dissoc order :updated-at :created-at :tracking-number)))
               (is (some? (:tracking-number order))))
-
-            (let [order (get-by-aggregate-id sut other-order-id)]
+            (let [other-order (get-by-aggregate-id sut other-order-id)]
               (is (= {:items ["something"]
                       :order-id other-order-id
+                      :customer-id customer-id
                       :price "99.99"
                       :resource-type "order"
                       :status "pending"}
-                     (dissoc order :created-at)))
-              (is (some? (:created-at order)))))))
+                     (dissoc other-order :created-at)))
+              (is (some? (:created-at other-order)))))
+          (testing "example of more complex query to search by payload content"
+            (let [orders (get-all-by-customer-id sut customer-id)]
+              (is (= 2 (count orders)))
+              #_(is (= [] orders))))))
       (finally
         (.stop database-container)))))
