@@ -20,6 +20,8 @@
 
         org.flywaydb/flyway-core {:mvn/version "9.21.2"}
 
+        metosin/malli {:mvn/version "0.12.0"}
+
         hiccup/hiccup {:mvn/version "2.0.0-RC1"}
         faker/faker {:mvn/version "0.3.2"}}
  :aliases {:dev {:main-opts ["-e" "(require,'dev)"
