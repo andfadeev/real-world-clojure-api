@@ -31,6 +31,8 @@
 
 (defn real-world-clojure-api-system
   [config]
+  (config/assert-valid-config! config)
+  ;; assert that config is a valid against a schema
   (component/system-map
     :example-component (example-component/new-example-component config)
     :in-memory-state-component (in-memory-state-component/new-in-memory-state-component config)
@@ -52,9 +54,26 @@
 (defn -main
   []
   (let [system (-> (config/read-config)
+                   (config/assert-valid-config!)
                    (real-world-clojure-api-system)
                    (component/start-system))]
     (println "Starting Real-World Clojure API Service with config")
     (.addShutdownHook
       (Runtime/getRuntime)
       (new Thread #(component/stop-system system)))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
